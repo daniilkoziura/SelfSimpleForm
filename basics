@@ -1,0 +1,162 @@
+HTML:
+<div class="request container dark-text" id="contacts">
+    <div class="row">
+        <div class="form-wrapper">
+            <h2>Request for proposal</h2>
+            <form action="controller.php" enctype="multipart/form-data" method="POST">
+                <div class="inputs-group">
+                <?php if(isset($_SESSION['errorData']['name'])): ?>
+                    <span style="color:red"><?php echo $_SESSION['errorData']['name']; ?></span>
+                <?php endif; ?>
+
+                    <input type="text"  name="name"    placeholder="Name">
+
+                <?php if(isset($_SESSION['errorData']['email'])): ?>
+                    <span style="color:red"><?php echo $_SESSION['errorData']['email']; ?></span>
+                <?php endif; ?>  
+
+                    <input type="email" name="email"   placeholder="Email">
+
+                <?php if(isset($_SESSION['errorData']['phone'])): ?>
+                    <span style="color:red"><?php echo $_SESSION['errorData']['phone']; ?></span>
+                <?php endif; ?>  
+
+                    <input type="text"  name="phone"   placeholder="Phone">
+
+                <?php if(isset($_SESSION['errorData']['subject'])): ?>
+                    <span style="color:red"><?php echo $_SESSION['errorData']['subject']; ?></span>
+                <?php endif; ?>      
+
+                    <input type="text"  name="subject" placeholder="Subject">
+
+                </div>
+                <?php if(isset($_SESSION['errorData']['message'])): ?>
+                    <span style="color:red"><?php echo $_SESSION['errorData']['message']; ?></span>
+                <?php endif; ?>  
+
+                <textarea rows="5" name="message" placeholder="Message"></textarea>
+                <div class="upload">
+                    <label for="file-upload" class="file-upload-label">
+                        <i class="file-upload-icon"></i> Attach File
+                    </label>
+                    <input id="file-upload" name="uploaded_file" type="file"/>
+                </div>
+
+                <?php if(isset($_SESSION['successData']['file'])): ?>
+                    <span style="color:darkgreen"><?php echo $_SESSION['successData']['file']; unset($_SESSION['successData']['file']) ?></span>
+                <?php endif; ?>  
+                <?php if(isset($_SESSION['errorData']['file'])): ?>
+                    <span style="color:darkgreen"><?php echo $_SESSION['errorData']['file']; unset($_SESSION['errorData']['file']) ?></span>
+                <?php endif; ?>  
+
+                <div class="send-button">
+                    <button class="btn btn-yellow">SEND REQUEST</button>
+                </div>
+                <?php if(isset($_SESSION['errorData']['mail'])): unset($_SESSION['successData']['mail']); ?>
+                    <span style="color:darkgreen"><?php echo $_SESSION['errorData']['mail']; unset($_SESSION['errorData']['mail']) ?></span>
+                <?php endif; ?>      
+                <?php if(isset($_SESSION['successData']['mail'])): unset($_SESSION['errorData']['mail']); ?>
+                    <span style="color:darkgreen"><?php echo $_SESSION['successData']['mail']; unset($_SESSION['successData']['mail']) ?></span>
+                <?php endif; ?>  
+            </form>
+        </div>
+    </div>
+</div>
+PHP:
+<?php
+//obrabotka Formu s otpravkoi soobsheniya 
+session_start();
+
+function sendMail($data)
+{
+    // hello@sodealsoftware.com 
+    $to       = 'daniilvl861@gmail.com';
+    $subject  = $data['subject'];
+    $message  = messageTempate($data);
+    $headers .= "MIME-Version: 1.0\r\n";
+    $headers .= "Content-Type: text/html; charset=iso-8859-1\n";
+    
+    return mail($to, $subject, $message, $headers) !== null ? true : false;
+}
+
+function messageTempate($data)
+{
+    $attach = 'file didn`t attach';
+    if (!empty($data['file'])) $attach = 'Attahed file: ' . $_SERVER['SERVER_NAME'] . '/' . $data['path'];
+    return"
+        <table>
+            <tr>
+                <td>Name: "                 .  $data['name']    . "</td>
+                <td>Email: "                .  $data['email']   . "</td>
+            </tr>
+            <tr>
+                <td>Phone: "                .  $data['phone']   . "</td>
+                <td>Subject: "              .  $data['subject'] . "</td>
+            </tr>
+            <tr>
+                <th>Message: "              .  $data['message'] . "</th>
+                <td><a href='".$attach."'>" .  $attach          . "</a></td>       
+            </tr>
+        </table>
+    ";
+}
+
+$data = [];
+
+$_SESSION['errorData'] = [
+    'name'        => 'Fill the name field',
+    'email'       => 'Fill the email field',
+    'phone'       => 'Fill the  phone field',
+    'subject'     => 'Fill the  subject field',
+    'message'     => 'Fill the  message field',
+    'file'        => 'The file wasn`t sent',
+    'mail'        => 'Mail wasn`t sent',
+];
+
+$_SESSION['successData'] = [
+    'mail'   => 'Mail was sent',
+    'file'   => 'The file  has been uploaded',
+];
+
+if(!empty($_POST['name'])){
+    $data['name'] = htmlspecialchars($_POST['name']);
+    unset($_SESSION['errorData']['name']);
+}
+
+if(!empty($_POST['email'])){
+    $data['email'] = $_POST['email'];
+    unset($_SESSION['errorData']['email']);
+}
+
+if(!empty($_POST['phone'])){
+    $data['phone'] = $_POST['phone'];
+    unset($_SESSION['errorData']['phone']);
+}
+
+if(!empty($_POST['subject'])){
+    $data['subject'] = htmlspecialchars($_POST['subject']);
+    unset($_SESSION['errorData']['subject']);
+}
+
+if(!empty($_POST['message'])){
+    $data['message'] = htmlspecialchars($_POST['message']);
+    unset($_SESSION['errorData']['message']);
+}
+
+if(!empty($_FILES['uploaded_file'])){
+    $data['file'] = $_FILES['uploaded_file']['name'];
+    $data['path'] = "uploads/".basename($data['file']);
+    if(move_uploaded_file($_FILES['uploaded_file']['tmp_name'], $data['path'])) unset($_SESSION['errorData']['file']);
+    else unset($_SESSION['successData']['file']); 
+}
+
+if (!empty($_POST['name']) && !empty($_POST['email']) 
+ && !empty($_POST['phone']) && !empty($_POST['subject']) 
+ && !empty($_POST['message'])){
+    if(sendMail($data)) 
+    unset($_SESSION['errorData']['mail']);
+    else unset($_SESSION['successData']['mail']);
+}
+
+
+header("Location: /");
